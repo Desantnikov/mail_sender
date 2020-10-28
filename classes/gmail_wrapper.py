@@ -5,15 +5,15 @@ import autoit
 from classes.webdriver_wrapper import WebdriverWrapper
 
 
-class UkrNetWrapper(WebdriverWrapper):
+class GmailWrapper(WebdriverWrapper):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     def log_in(self):
-        self.load_page('https://mail.ukr.net/')
+        self.load_page('https://gmail.com/')
 
         # enter login
-        self.wait_and_send_keys(locator_value='//*[@id="id-l"]', keys=self.config['login'])
+        self.wait_and_send_keys(locator_value='//*[@id="identifierId"]', keys=self.config['login'])
 
         # enter password
         self.wait_and_send_keys(locator_value='//*[@id="id-p"]', keys=self.config['password'])
@@ -76,37 +76,41 @@ class UkrNetWrapper(WebdriverWrapper):
         self.switch_to_iframe(iframe=self.driver.find_element_by_xpath('//*[@id="mce_0_ifr"]'))
 
     def _set_text_align(self, align):
-        if align == '':
+        print(f'Align changes and now: {align}')
+
+        if not align:
             return
 
         # open aligns dropdown
         self.wait_and_click(locator_value='//*[@id="mceu_11"]/button[1]/div')
 
-        aligns_dict = {'LEFT': '#mceu_35 > ul > li.mce-btn.mce-alignleft.mce-align-css > button',
-                       'RIGHT': '#mceu_35 > ul > li.mce-btn.mce-align-css.mce-alignright > button',
-                       'CENTER': '#mceu_35 > ul > li.mce-btn.mce-aligncenter.mce-align-css > button'}
+        aligns_dict = {'LEFT': '//*[@id="mceu_35"]/ul/li[1]',
+                       'RIGHT': '//*[@id="mceu_35"]/ul/li[3]',
+                       'CENTER': '//*[@id="mceu_35"]/ul/li[2]'}
+
 
         # click on align's button
-        self.wait_and_click(locator_value=aligns_dict[align], locator_type='css selector')
+        self.wait_and_click(locator_value=aligns_dict[align])
 
     def _fill_body_with_formatting(self, body):
         for text_part in body:
-            print(text_part.text)
-            print(text_part.alignment)
+            # aligns dropdown is placed outside of mail's body iframe
+            self.switch_to_iframe(iframe='parent')
 
-            if text_part.text:
-                # aligns dropdown is placed outside of mail's body iframe
-                self.switch_to_iframe(iframe='parent')
-                # set align of just written text
-                self._set_text_align(text_part.alignment)
+            # set align of just written text
+            self._set_text_align(text_part.alignment)
 
-                # return to body iframe
-                self._switch_to_mail_body_iframe()
+            # return to body iframe
+            self._switch_to_mail_body_iframe()
 
-            # fill body textbox
-            self.wait_and_send_keys('//*[@id="tinymce"]', keys=f'{text_part.text}\r\n' or '\r\n', clear=False)
+            # blank paragraph = newline
+            if text_part.text == '':
+                self.wait_and_send_combination(locator_value='//*[@id="tinymce"]', combination='enter')
+            else:
+                # fill body textbox
+                self.wait_and_send_keys('//*[@id="tinymce"]', keys=text_part.text, clear=False)
 
             # start new paragraph
-            # self.wait_and_send_combination(locator_value='//*[@id="tinymce"]', combination='enter')
+            self.wait_and_send_combination(locator_value='//*[@id="tinymce"]', combination='enter')
 
         print('filled!!!!')

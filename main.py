@@ -1,10 +1,10 @@
-# save used mail to list
 import docx
 import pandas as pd
 
 from classes.file_classes import FilesSequence
 from classes.mail_classes import MailTemplate, Mail
 from classes.ukr_net_wrapper import UkrNetWrapper
+from classes.gmail_wrapper import GmailWrapper
 
 
 def initialize_data():
@@ -59,7 +59,7 @@ def get_emails_from_excel_files_sequence(excel_files_sequence: FilesSequence):
 
 
 def get_credentials():
-    login, password = 'vladislav_vladislavovich@ukr.net', 'DctvGhbdtn'
+    # login, password = 'vladislav_vladislavovich@ukr.net', 'DctvGhbdtn'
 
     login = input('Введите логин:\r\n')
     password = input('Введите пароль:\r\n')
@@ -76,12 +76,21 @@ if __name__ == '__main__':
     emails_list = get_emails_from_excel_files_sequence(data_from_disk['excel_files_sequence'])
 
     driver = UkrNetWrapper(config=get_credentials())
+    # driver = GmailWrapper(config=get_credentials())
+
     driver.log_in()
 
+    spammed_mails = []
     for recipient in emails_list:
         mail = Mail(recipient=recipient, mail_template=data_from_disk['mail_template'])
-        driver.send_mail(mail)
+        # driver.send_mail(mail)
+        spammed_mails.append(mail.recipient)
+        print(f'Mail to {mail.recipient} sent')
 
+    file_name = 'spammed_emails.xlsx'
+    spammed_mails_df = pd.DataFrame(data=spammed_mails, columns=['Email'])
+    spammed_mails_df.to_excel(file_name)
+    print(f'File {file_name} saved')
 
 
 
