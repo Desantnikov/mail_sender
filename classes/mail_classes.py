@@ -61,7 +61,7 @@ class MailTemplate:
 
     def _set_body(self):
         for paragraph in self.paragraphs[1:]:
-            self.body.append(TextPartToEnter(paragraph))
+            self.body.append(TextPartToEnter(paragraph=paragraph))
 
     def _get_body_as_plain_text(self):
         return "\r\n".join([part.text for part in self.body])
@@ -81,4 +81,3 @@ class MailTemplate:
         for relation_id, relation in self.hyperlinks.items():
             for text_part in self.body:
                 text_part.fill_hyperlink(relation_id, relation._target)
-
