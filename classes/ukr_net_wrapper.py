@@ -63,6 +63,7 @@ class UkrNetWrapper(WebdriverWrapper):
         attachment_list_children = self.driver.find_elements_by_css_selector('#screens > div > div.screen__content > '
                                                                              'section.sendmsg__attachments > div.'
                                                                              'sendmsg__attachments-list > div')
+
         if not len(attachment_list_children) == len(mail.attachment_files_sequence):
             print('Error!')
 
@@ -75,33 +76,41 @@ class UkrNetWrapper(WebdriverWrapper):
         self.switch_to_iframe(iframe=self.driver.find_element_by_xpath('//*[@id="mce_0_ifr"]'))
 
     def _set_text_align(self, align):
+        print(f'Align changes and now: {align}')
+
         if not align:
             return
 
         # open aligns dropdown
         self.wait_and_click(locator_value='//*[@id="mceu_11"]/button[1]/div')
 
-        aligns_dict = {'LEFT': '//*[@id="mceu_91"]/ul/li[1]/button',
-                       'RIGHT': '//*[@id="mceu_91"]/ul/li[3]/button',
-                       'CENTER': '//*[@id="mceu_35"]/ul/li[2]/button/div'}
+        aligns_dict = {'LEFT': '//*[@id="mceu_35"]/ul/li[1]',
+                       'RIGHT': '//*[@id="mceu_35"]/ul/li[3]',
+                       'CENTER': '//*[@id="mceu_35"]/ul/li[2]'}
+
 
         # click on align's button
         self.wait_and_click(locator_value=aligns_dict[align])
 
     def _fill_body_with_formatting(self, body):
         for text_part in body:
-            # return to body iframe
-            self._switch_to_mail_body_iframe()
-
-            # fill body textbox
-            self.wait_and_send_keys('//*[@id="tinymce"]', keys=text_part.text, clear=False)
-            self.wait_and_send_combination(locator_value='//*[@id="tinymce"]', combination='enter')
-
-
             # aligns dropdown is placed outside of mail's body iframe
             self.switch_to_iframe(iframe='parent')
 
             # set align of just written text
             self._set_text_align(text_part.alignment)
+
+            # return to body iframe
+            self._switch_to_mail_body_iframe()
+
+            # blank paragraph = newline
+            if text_part.text == '':
+                self.wait_and_send_combination(locator_value='//*[@id="tinymce"]', combination='enter')
+            else:
+                # fill body textbox
+                self.wait_and_send_keys('//*[@id="tinymce"]', keys=text_part.text, clear=False)
+
+            # start new paragraph
+            self.wait_and_send_combination(locator_value='//*[@id="tinymce"]', combination='enter')
 
         print('filled!!!!')

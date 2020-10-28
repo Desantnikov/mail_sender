@@ -62,8 +62,15 @@ class MailTemplate:
         self.topic = self.paragraphs[0].text.replace('Тема: ', '').strip()
 
     def _set_body(self):
-        for paragraph in self.paragraphs[1:]:
-            self.body.append(TextPartToEnter(paragraph=paragraph))
+        # 0-th line for mail topic
+        for index, paragraph in enumerate(self.paragraphs[1:]):
+            if paragraph.text:
+                starting_paragraph_index = index + 1
+                break
+
+        self.body = [TextPartToEnter(paragraph=paragraph) for paragraph in self.paragraphs[starting_paragraph_index:]]
+
+
 
     def _get_body_as_plain_text(self):
         return "\r\n".join([part.text for part in self.body])

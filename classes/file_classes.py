@@ -5,6 +5,7 @@ import glob
 class FilesSequence:
     def __init__(self, folder, files_template='*'):
         self.files = list(map(os.path.abspath, glob.glob(f'{folder}/{files_template}')))
+        self.folder = folder
 
     def __str__(self):
         return '\r\n'.join([f'{index}: {file}' for index, file in enumerate(self.get_basenames())])
