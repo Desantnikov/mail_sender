@@ -2,6 +2,7 @@ import re
 
 from docx import Document
 from docx.opc.constants import RELATIONSHIP_TYPE
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 
 class TextPartToEnter:
@@ -9,7 +10,7 @@ class TextPartToEnter:
         self.paragraph = paragraph
 
         self.text = paragraph.text
-        self.alignment = paragraph.alignment
+        self.alignment = WD_ALIGN_PARAGRAPH._member_to_xml.get(paragraph.alignment, '').upper()
 
     def __str__(self):
         return self.text

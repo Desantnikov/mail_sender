@@ -78,7 +78,7 @@ class WebdriverWrapper:
         return element
 
     def send_combination(self, element: FirefoxWebElement = None, combination: str = None):
-        # TODO: send directly
+        # TODO: send directly instead of using currently focused element
         if combination == 'ctrl+v':
             ActionChains(self.driver).key_down(Keys.CONTROL).send_keys('V').key_up(Keys.CONTROL).perform()
         if combination == 'enter':
@@ -88,6 +88,8 @@ class WebdriverWrapper:
     #     return self.driver.find_elements_by_tag_name("iframe")
 
     def switch_to_iframe(self, iframe: Union[WebElement, str]):
+        print(f'Switching to {iframe}')
+
         if iframe == 'parent':
             self.driver.switch_to.parent_frame()
             return

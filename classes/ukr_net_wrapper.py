@@ -33,11 +33,8 @@ class UkrNetWrapper(WebdriverWrapper):
         self.wait_and_send_keys(locator_value='//*[@id="screens"]/div/div[2]/section[1]/div[4]/div[2]/input',
                                 keys=mail.topic)
 
-        # switch to iframe with mail body input
-        self.switch_to_iframe(iframe=self.driver.find_element_by_xpath('//*[@id="mce_0_ifr"]'))
-
         # fill mail body input
-        self.wait_and_send_keys('//*[@id="tinymce"]', keys=str(mail))  # TODO: !!!!
+        self._fill_body_with_formatting(mail.body)
 
         # return to parent iframe
         self.switch_to_iframe(iframe='parent')
@@ -73,3 +70,38 @@ class UkrNetWrapper(WebdriverWrapper):
         time.sleep(10)
         # click on "send" button
         self.wait_and_click(locator_value='//*[@id="screens"]/div/div[1]/div/button')
+
+    def _switch_to_mail_body_iframe(self):
+        self.switch_to_iframe(iframe=self.driver.find_element_by_xpath('//*[@id="mce_0_ifr"]'))
+
+    def _set_text_align(self, align):
+        if not align:
+            return
+
+        # open aligns dropdown
+        self.wait_and_click(locator_value='//*[@id="mceu_11"]/button[1]/div')
+
+        aligns_dict = {'LEFT': '//*[@id="mceu_91"]/ul/li[1]/button',
+                       'RIGHT': '//*[@id="mceu_91"]/ul/li[3]/button',
+                       'CENTER': '//*[@id="mceu_35"]/ul/li[2]/button/div'}
+
+        # click on align's button
+        self.wait_and_click(locator_value=aligns_dict[align])
+
+    def _fill_body_with_formatting(self, body):
+        for text_part in body:
+            # return to body iframe
+            self._switch_to_mail_body_iframe()
+
+            # fill body textbox
+            self.wait_and_send_keys('//*[@id="tinymce"]', keys=text_part.text, clear=False)
+            self.wait_and_send_combination(locator_value='//*[@id="tinymce"]', combination='enter')
+
+
+            # aligns dropdown is placed outside of mail's body iframe
+            self.switch_to_iframe(iframe='parent')
+
+            # set align of just written text
+            self._set_text_align(text_part.alignment)
+
+        print('filled!!!!')
