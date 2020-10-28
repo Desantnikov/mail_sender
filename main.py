@@ -1,20 +1,13 @@
-# parse mail theme and mail text from specified *.doc file
 
-# specify files to attach
+# save used mail to list
 
-# take all names of *.xlsx files from specified folder (save to list)
-# read files one by one
-    # check if 'EMAIL' column present in file
-    # read all emails to tuple, add tuple to dict {file_name: emails1, ...}
-    # print name of file and amount of emails red
-# specify files order (create tuple with names in order)
-
-# send mail (reuse code)
-
+import autoit
 import docx
+import pandas as pd
 
 from classes.file_classes import FilesSequence
 from classes.mail_classes import MailTemplate
+from classes.ukr_net_wrapper import UkrNetWrapper
 
 # mail_content_file = input(f'Введите имя файла с темой и текстом письма ')
 mail_content_file = 'text.docx'
@@ -27,22 +20,106 @@ print(f'\r\n{mail_template}')
 
 # folder_with_excels = input(f'Введите имя папки с эксель-файлами с адресами для рассылки:\r')
 folder_with_excels = 'excels'
+excel_files_sequence = FilesSequence(folder=folder_with_excels)
 
-files_sequence = FilesSequence(folder=folder_with_excels)
+# folder_with_attachments = input(f'Введите имя папки с файлами, которые мы будем прикреплять:\r')
+folder_with_attachments = 'attachments'
+attachment_files_sequence = FilesSequence(folder=folder_with_attachments)
 
-while True:
-    print(f'\r\nПоследовательность файлов:\r\n{files_sequence}\r\n')
-    initial_position = input('Если хотите передвинуть файл - введите его номер и нажмите энтер.\r\n'
-                             'Если текущий порядок устраивает - просто нажмите энтер.\r\n')
-    if initial_position == '':
-        break
+# # ordering excel files to collect emails from
+# while True:
+#     print(f'\r\nПоследовательность файлов:\r\n{excel_files_sequence}\r\n')
+#     initial_position = input('Если хотите передвинуть файл - введите его номер и нажмите энтер.\r\n'
+#                              'Если текущий порядок устраивает - просто нажмите энтер.\r\n')
+#     if initial_position == '':
+#         break
+#
+#     new_position = input('Введите на какую позицию хотите передвинуть файл:\r\n')
+#     try:
+#         excel_files_sequence.reorder_files(current_index=int(initial_position), new_index=int(new_position))
+#     except IndexError:
+#         print('Неправильный ввод, повторите снова.\r\n')
 
-    elif initial_position.isdigit():
-        new_position = input('Введите на какую позицию хотите передвинуть файл:\r\n')
+# # ordering attachment files
+# while True:
+#     print(f'\r\nПоследовательность файлов:\r\n{attachment_files_sequence}\r\n')
+#     initial_position = input('Если хотите передвинуть файл - введите его номер и нажмите энтер.\r\n'
+#                              'Если текущий порядок устраивает - просто нажмите энтер.\r\n')
+#     if initial_position == '':
+#         break
+#
+#     new_position = input('Введите на какую позицию хотите передвинуть файл:\r\n')
+#     try:
+#         attachment_files_sequence.reorder_files(current_index=int(initial_position), new_index=int(new_position))
+#     except IndexError:
+#         print('Неправильный ввод, повторите снова.\r\n')
 
-        files_sequence.reorder_files(current_index=int(initial_position), new_index=int(new_position))
-    else:
-        print('Неправильный ввод, повторите снова.\r\n')
+emails_list = []
+for file in excel_files_sequence.files:
+    df = pd.read_excel(file, skiprows=1)
+
+    # Take only email column and remove all blank values
+    df = df['Email'][df['Email'].notna()]
+
+    emails_list += df.values.tolist()
+
+    print(f'{len(df.values)} адресов найдено в файле {file}')
+    print(f'Всего адресов найдено: {len(emails_list)}\r\n')
+
+
+# login = input('Введите логин:\r\n')
+# password = input('Введите пароль:\r\n')
+
+login, password = 'vladislav_vladislavovich@ukr.net', 'DctvGhbdtn'
+config = {'login': login, 'password': password}
+
+driver = UkrNetWrapper(config=config)
+
+# log into ukr net
+driver.log_in()
+
+# click "write email"
+driver.wait_and_click(locator_value='//*[@id="content"]/aside/button')
+
+# fill receiver input
+driver.wait_and_send_keys(locator_value='//*[@id="screens"]/div/div[2]/section[1]/div[1]/div[4]/input[2]', keys='asd')
+
+# fill topic input
+driver.wait_and_send_keys(locator_value='//*[@id="screens"]/div/div[2]/section[1]/div[4]/div[2]/input', keys='asd')
+
+# switch to iframe with mail body input
+driver.switch_to_iframe(iframe=driver.driver.find_element_by_xpath('//*[@id="mce_0_ifr"]'))
+
+# fill mail body input
+driver.wait_and_send_keys('//*[@id="tinymce"]', keys='wfawefazewfzaew')
+
+# return to parent iframe
+driver.switch_to_iframe(iframe='parent')
+
+# attach files one by one
+file_dialogue_window = "[CLASS:#32770; TITLE:Open]"
+for file in attachment_files_sequence:
+    # click attach file button
+    driver.wait_and_click(locator_value='//*[@id="screens"]/div/div[2]/section[2]/div[2]/label/button')
+
+    # wait until file selector doalogue window will open
+    autoit.win_wait(file_dialogue_window, 60)
+
+    # fill input with file path
+    autoit.control_set_text(file_dialogue_window, "Edit1", file)
+
+    # click "OK"
+    autoit.control_click(file_dialogue_window, "Button1")
+
+
+
+print('All done!!!')
+
+
+# attach_files_button.send_keys(r'C:\Users\anton.desiatnykov\PycharmProjects\mail_sender\classes\file_classes.py')
+# click on "attach files"
+# driver.wait_and_send_keys('//*[@id="screens"]/div/div[2]/section[2]/div[2]/label/button', keys=r'C:\Users\anton.desiatnykov\PycharmProjects\mail_sender\classes\file_classes.py')
+print('asd')
 
 
 print('qwdqwd')

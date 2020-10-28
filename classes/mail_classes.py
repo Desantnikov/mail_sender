@@ -54,7 +54,7 @@ class MailTemplate:
         self._fill_hyperlinks()
 
     def __str__(self):
-        return f'Тема:\r\n{str(self.theme)}\r\nТекст:{self._get_body_as_plain_text()}'
+        return f'Тема:\r\n{str(self.theme)}\r\nТекст:{self._get_body_as_plain_text()}\r\n'
 
     def _set_theme(self):
         self.theme = self.paragraphs[0].text.replace('Тема: ', '').strip()
