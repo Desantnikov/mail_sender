@@ -1,30 +1,26 @@
-
 # save used mail to list
-
-import autoit
 import docx
 import pandas as pd
 
 from classes.file_classes import FilesSequence
-from classes.mail_classes import MailTemplate
+from classes.mail_classes import MailTemplate, Mail
 from classes.ukr_net_wrapper import UkrNetWrapper
-
-# mail_content_file = input(f'Введите имя файла с темой и текстом письма ')
-mail_content_file = 'text.docx'
-
-mail_content_doc = docx.Document(mail_content_file)
-
-mail_template = MailTemplate(doc=mail_content_doc)
-
-print(f'\r\n{mail_template}')
 
 # folder_with_excels = input(f'Введите имя папки с эксель-файлами с адресами для рассылки:\r')
 folder_with_excels = 'excels'
-excel_files_sequence = FilesSequence(folder=folder_with_excels)
+excel_files_sequence = FilesSequence(folder=folder_with_excels, files_template='*.xlsx')
 
 # folder_with_attachments = input(f'Введите имя папки с файлами, которые мы будем прикреплять:\r')
 folder_with_attachments = 'attachments'
 attachment_files_sequence = FilesSequence(folder=folder_with_attachments)
+
+# mail_content_file = input(f'Введите имя файла с темой и текстом письма ')
+mail_content_file = 'text.docx'
+mail_content_doc = docx.Document(mail_content_file)
+mail_template = MailTemplate(doc=mail_content_doc, attachment_files_sequence=attachment_files_sequence)
+
+print(f'\r\n{mail_template}')
+
 
 # # ordering excel files to collect emails from
 # while True:
@@ -78,42 +74,10 @@ driver = UkrNetWrapper(config=config)
 # log into ukr net
 driver.log_in()
 
-# click "write email"
-driver.wait_and_click(locator_value='//*[@id="content"]/aside/button')
-
-# fill receiver input
-driver.wait_and_send_keys(locator_value='//*[@id="screens"]/div/div[2]/section[1]/div[1]/div[4]/input[2]', keys='asd')
-
-# fill topic input
-driver.wait_and_send_keys(locator_value='//*[@id="screens"]/div/div[2]/section[1]/div[4]/div[2]/input', keys='asd')
-
-# switch to iframe with mail body input
-driver.switch_to_iframe(iframe=driver.driver.find_element_by_xpath('//*[@id="mce_0_ifr"]'))
-
-# fill mail body input
-driver.wait_and_send_keys('//*[@id="tinymce"]', keys='wfawefazewfzaew')
-
-# return to parent iframe
-driver.switch_to_iframe(iframe='parent')
-
-# attach files one by one
-file_dialogue_window = "[CLASS:#32770; TITLE:Open]"
-for file in attachment_files_sequence:
-    # click attach file button
-    driver.wait_and_click(locator_value='//*[@id="screens"]/div/div[2]/section[2]/div[2]/label/button')
-
-    # wait until file selector doalogue window will open
-    autoit.win_wait(file_dialogue_window, 60)
-
-    # fill input with file path
-    autoit.control_set_text(file_dialogue_window, "Edit1", file)
-
-    # click "OK"
-    autoit.control_click(file_dialogue_window, "Button1")
-
-
-
-print('All done!!!')
+# send mails to all recipients
+for recipient in emails_list:
+    mail = Mail(recipient=recipient, mail_template=mail_template)
+    driver.send_mail(mail)
 
 
 # attach_files_button.send_keys(r'C:\Users\anton.desiatnykov\PycharmProjects\mail_sender\classes\file_classes.py')

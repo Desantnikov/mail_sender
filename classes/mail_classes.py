@@ -39,13 +39,14 @@ class TextPartToEnter:
 
 
 class MailTemplate:
-    def __init__(self, doc: Document):
+    def __init__(self, doc: Document, attachment_files_sequence):
         self.doc = doc
         self.paragraphs = doc.paragraphs
 
-        self.theme = None
-        self.body = []
+        self.topic = None
         self.hyperlinks = None
+        self.body = []
+        self.attachment_files_sequence = attachment_files_sequence
 
         self._set_theme()
         self._set_body()
@@ -54,10 +55,10 @@ class MailTemplate:
         self._fill_hyperlinks()
 
     def __str__(self):
-        return f'Тема:\r\n{str(self.theme)}\r\nТекст:{self._get_body_as_plain_text()}\r\n'
+        return f'Тема:\r\n{str(self.topic)}\r\nТекст:{self._get_body_as_plain_text()}\r\n'
 
     def _set_theme(self):
-        self.theme = self.paragraphs[0].text.replace('Тема: ', '').strip()
+        self.topic = self.paragraphs[0].text.replace('Тема: ', '').strip()
 
     def _set_body(self):
         for paragraph in self.paragraphs[1:]:
@@ -81,3 +82,15 @@ class MailTemplate:
         for relation_id, relation in self.hyperlinks.items():
             for text_part in self.body:
                 text_part.fill_hyperlink(relation_id, relation._target)
+
+
+class Mail:
+    def __init__(self, recipient: str, mail_template: MailTemplate):
+        self.recipient = recipient
+
+        self.topic = mail_template.topic
+        self.body = mail_template.body
+        self.attachment_files_sequence = mail_template.attachment_files_sequence
+
+    def __str__(self):
+        return "\r\n".join([part.text for part in self.body])
