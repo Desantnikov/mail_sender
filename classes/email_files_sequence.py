@@ -9,7 +9,7 @@ class EmailFilesSequence(FilesSequence):
     SKIP_ROWS = 1
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(files_template='*.xls*', *args, **kwargs)
 
         self.emails_df = self._get_emails_df()
 

@@ -2,42 +2,40 @@ from classes.files_sequence import FilesSequence
 
 
 class Config:
-    def __init__(self, stub=False):
-        if stub:
-            self.data = {'sender_email': '***',
-                         'sender_password': '***',
-                         'smtp_url': 'smtp.ukr.net',
-                         'smtp_port': 465,
-                         'subject': 'Subject UKR NET!!!!!',
-                         'folder_with_attachments': 'attachments',
-                         'text_file_name': 'text.txt',
-                         'folder_with_excels': 'excels',
-                         'spammed_emails_file': 'spammed_emails.xlsx'
-                         }
+    def __init__(self, args):
+        if args.stub:
+            self.sender_email = '***'
+            self.sender_password = '***'
+            self.smtp_url = 'smtp.ukr.net'
+            self.smtp_port = 465
+            self.subject = 'Subject UKR NET!!!!!'
+            self.folder_with_attachments = 'attachments'
+            self.text_file_name = 'text.txt'
+            self.folder_with_excels = 'excels'
+            self.spammed_emails_file = 'spammed_emails.xlsx'
 
         else:
-            self.data = {'sender_email': input('Введите адрес с которого отправлять:\r\n'),
-                         'sender_password': input('Введите пароль:\r\n'),
-                         'smtp_url': input('Введите адрес SMTP сервера:\r\n'),
-                         'smtp_port': input('Введите порт SMTP сервера:\r\n'),
-                         'subject': input('Введите тему письма:\r\n'),
-                         'folder_with_attachments': input(
-                             f'Введите имя папки с файлами, которые мы будем прикреплять:\r\n'),
-                         'text_file_name': input('Введите название файла с телом письма:\r\n'),
-                         'folder_with_excels': input(
-                             f'Введите имя папки с эксель-файлами с адресами для рассылки:\r\n'),
-                         'spammed_emails_file': input(f'Введите имя файла с обработанными адресами '
-                                                      f'(создать если отсутствует):\r\n')
-                         }
+            self.sender_email = input('Введите адрес с которого отправлять:\r\n')
+            self.sender_password = input('Введите пароль:\r\n')
+            self.smtp_url = input('Введите адрес SMTP сервера:\r\n') if not args.gmail else 'smtp.gmail.com'
+            self.smtp_port = input('Введите порт SMTP сервера:\r\n') if not args.gmail else 465
+            self.subject = input('Введите тему письма:\r\n')
+            self.folder_with_attachments = input(f'Введите имя папки с файлами, которые мы будем прикреплять:\r\n')
+            self.text_file_name = input('Введите название файла с телом письма:\r\n')
+            self.folder_with_excels = input(f'Введите имя папки с эксель-файлами с адресами для рассылки:\r\n')
+            self.spammed_emails_file = input(f'Введите имя файла с обработанными адресами (создать если нет):\r\n')
 
-        self.data['files_to_attach_sequence'] = FilesSequence(folder=self.data.pop('folder_with_attachments'),
-                                                              reorder_on_creation=not stub)
+        self.files_to_attach_sequence = FilesSequence(folder=self.folder_with_attachments, reorder=not args.no_reorder)
 
-        with open(self.data.pop('text_file_name')) as f:
-            self.data['body'] = f.read()
-
-        # quick w/a
-        [setattr(self, k, v) for k, v in self.data.items()]
+        with open(self.text_file_name) as f:
+            self.body = f.read()
 
     def __str__(self):
-        return '\n'.join([f'{k}: {v if k != "body" else f"{v[:30]}..."}' for k, v in self.data.items()])
+        return '\n'.join([f'{k}: {v if k != "body" else f"{v[:30]}..."}' for k, v in self.__dict__.items()])
+
+    def get_mail_settings(self):
+        return {'smtp_url': self.smtp_url, 'smtp_port': self.smtp_port,
+                'sender_email': self.sender_email,
+                'sender_password': self.sender_password,
+                'body': self.body, 'subject': self.subject,
+                'files_to_attach_sequence': self.files_to_attach_sequence}

@@ -26,7 +26,7 @@ class Mail:
         self.logger.info(f'Mail created:\n{self}')
 
     def __str__(self):
-        return '\n'.join([f'{k}: {v}' for k, v in self.__dict__.items()])
+        return '\n'.join([f'{k}: {str(v)[:30]}...' for k, v in self.__dict__.items()])
 
     def _initialize_message(self, sender_email: str, subject: str, message_body: str):
         self.message = MIMEMultipart("alternative")
@@ -46,4 +46,7 @@ class Mail:
         with smtplib.SMTP_SSL(self.smtp_url, self.smtp_port, context=context) as server:
             server.login(self.sender_email, self.sender_password)
             server.sendmail(self.sender_email, receiver_email, self.message.as_string().encode('ascii'))
-        self.logger.info(f'Mail to {receiver_email} sent')
+
+        status_string = f'Mail to {receiver_email} sent'
+        self.logger.info(status_string)
+        print(status_string)
