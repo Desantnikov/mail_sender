@@ -1,96 +1,64 @@
-import docx
+import datetime
+import logging
+import os
+import sys
+
 import pandas as pd
 
-from classes.file_classes import FilesSequence
-from classes.mail_classes import MailTemplate, Mail
-from classes.ukr_net_wrapper import UkrNetWrapper
-from classes.gmail_wrapper import GmailWrapper
+from classes.config import Config
+from classes.email_files_sequence import EmailFilesSequence
+from classes.mail import Mail
+
+STUB = False
 
 
-def initialize_data():
-    folder_with_excels = input(f'Введите имя папки с эксель-файлами с адресами для рассылки:\r\n')
-    # folder_with_excels = 'excels'
-    excel_files_sequence = FilesSequence(folder=folder_with_excels, files_template='*.xlsx')
-
-    folder_with_attachments = input(f'Введите имя папки с файлами, которые мы будем прикреплять:\r\n')
-    # folder_with_attachments = 'attachments'
-    attachment_files_sequence = FilesSequence(folder=folder_with_attachments)
-
-    mail_content_file = input(f'Введите имя файла с темой и текстом письма:\r\n')
-    # mail_content_file = 'text.docx'
-    mail_content_doc = docx.Document(mail_content_file)
-    mail_template = MailTemplate(doc=mail_content_doc, attachment_files_sequence=attachment_files_sequence)
-
-    # print(f'\r\n{mail_template}')
-
-    return {'excel_files_sequence': excel_files_sequence,
-            'attachment_files_sequence': attachment_files_sequence,
-            'mail_template': mail_template}
-
-
-def order_files_sequence(files_sequence: FilesSequence):
-    while True:
-        print(f'\r\nПоследовательность файлов из папки {files_sequence.folder}:\r\n{files_sequence}\r\n')
-        initial_position = input('Если хотите передвинуть файл - введите его номер и нажмите энтер.\r\n'
-                                 'Если текущий порядок устраивает - просто нажмите энтер.\r\n')
-        if initial_position == '':
-            break
-
-        new_position = input('Введите на какую позицию хотите передвинуть файл:\r\n')
-        try:
-            files_sequence.reorder_files(current_index=int(initial_position), new_index=int(new_position))
-        except IndexError:
-            print('Неправильный ввод, повторите снова.\r\n')
-
-
-def get_emails_from_excel_files_sequence(excel_files_sequence: FilesSequence):
-    emails_list = []
-    for file in excel_files_sequence.files:
-        df = pd.read_excel(file, skiprows=1)
-
-        # Take only email column and remove all blank values
-        df = df['Email'][df['Email'].notna()]
-
-        emails_list += df.values.tolist()
-        print(f'{len(df.values)} адресов найдено в файле {file}')
-
-    print(f'Всего адресов найдено: {len(emails_list)}\r\n')
-    return emails_list
-
-
-def get_credentials():
-    # login, password = 'vladislav_vladislavovich@ukr.net', 'DctvGhbdtn'
-
-    login = input('Введите логин:\r\n')
-    password = input('Введите пароль:\r\n')
-
-    return {'login': login, 'password': password}
+def logger_configure():
+    os.makedirs('./logs', exist_ok=True)
+    logfile = datetime.datetime.today().strftime('%Y-%d-%m')
+    logging.basicConfig(
+        format='%(asctime)s:%(levelname)s:%(name)s:: %(message)s', datefmt='%H:%M:%S',
+        handlers=[logging.FileHandler(f'logs/{logfile}.log'), logging.StreamHandler()])
+    logging.root.setLevel(logging.INFO)
 
 
 if __name__ == '__main__':
-    data_from_disk = initialize_data()
+    logger_configure()
+    logger = logging.getLogger('Main')
+    logger.addHandler(logging.StreamHandler(sys.stdout))
 
-    order_files_sequence(data_from_disk['attachment_files_sequence'])
-    order_files_sequence(data_from_disk['excel_files_sequence'])
+    config = Config(stub=STUB)
+    logger.info(f'Got input values:\r\n{config}')
 
-    emails_list = get_emails_from_excel_files_sequence(data_from_disk['excel_files_sequence'])
+    mail_template = Mail(smtp_url=config.smtp_url, smtp_port=config.smtp_port, sender_email=config.sender_email,
+                         sender_password=config.sender_password, body=config.body, subject=config.subject,
+                         files_to_attach_sequence=config.files_to_attach_sequence)
 
-    driver = UkrNetWrapper(config=get_credentials())
-    # driver = GmailWrapper(config=get_credentials())
+    emails_to_spam_df = EmailFilesSequence(folder=config.folder_with_excels, files_template='*.xls*',
+                                           reorder_on_creation=not STUB).emails_df
 
-    driver.log_in()
+    if os.path.exists(config.spammed_emails_file):
+        logger.info(f'File {config.spammed_emails_file} already exists, loading')
 
-    spammed_mails = []
-    for recipient in emails_list:
-        mail = Mail(recipient=recipient, mail_template=data_from_disk['mail_template'])
-        # driver.send_mail(mail)
-        spammed_mails.append(mail.recipient)
-        print(f'Mail to {mail.recipient} sent')
+        spammed_emails_df = pd.read_excel(config.spammed_emails_file, usecols=['Email'])
+        logger.info(f'{len(spammed_emails_df)} emails found in already spammed excel')
 
-    file_name = 'spammed_emails.xlsx'
-    spammed_mails_df = pd.DataFrame(data=spammed_mails, columns=['Email'])
-    spammed_mails_df.to_excel(file_name)
-    print(f'File {file_name} saved')
+        # exclude intersection
+        emails_to_spam_df = emails_to_spam_df[~emails_to_spam_df.isin(spammed_emails_df)].dropna()
+        logger.info(f'{len(emails_to_spam_df)} emails left to spam after removing already spammed')
 
+    else:
+        spammed_emails_df = pd.DataFrame(columns=['Email'])
+        logger.info(f'File {config.spammed_emails_file} doesn"t exist, creating blank')
 
+    for counter, email in enumerate(emails_to_spam_df.Email.values, start=1):
+        try:
+            # every 50th mail
+            if not(counter % 50):
+                logger.info(f'Sending {counter}th mail; {len(emails_to_spam_df.Email.values)-counter} left')
 
+            mail_template.send_to(receiver_email=email)
+            spammed_emails_df = spammed_emails_df.append({'Email': email}, ignore_index=True)
+
+        except Exception as e:
+            logger.exception(f'Exception happened during spamming')
+            continue

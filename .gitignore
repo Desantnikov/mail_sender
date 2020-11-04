@@ -3,3 +3,9 @@
 *.xlsx
 .idea
 *pycache*
+*.log
+logs
+build
+attachments
+dist
+excels
