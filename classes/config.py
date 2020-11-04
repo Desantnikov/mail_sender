@@ -4,8 +4,8 @@ from classes.files_sequence import FilesSequence
 class Config:
     def __init__(self, args):
         if args.stub:
-            self.sender_email = 'vladislav_vladislavovich@ukr.net'
-            self.sender_password = 'SIPdGNqgAR4fCJEG'
+            self.sender_email = '***'
+            self.sender_password = '***'
             self.smtp_url = 'smtp.ukr.net'
             self.smtp_port = 465
             self.subject = 'Subject UKR NET!!!!!'
